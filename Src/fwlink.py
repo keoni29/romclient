@@ -24,10 +24,11 @@ class Fw_Link():
         self.ser.flushOutput()
 
         retv = True  
-      except serial.SerialException:
-        pass
+      except serial.SerialException as e:
+        print("Serial error: (", e.errno, "):", e.strerror)
 
     return retv
+
 
   def close(self):
     """
@@ -36,7 +37,8 @@ class Fw_Link():
     if self.ser is not None:
       self.ser.close()
 
-  def write(data):
+
+  def write(self, data):
     """
     Write data to the firmware.
     :param data: Data.
@@ -44,14 +46,20 @@ class Fw_Link():
     :return: True if data was written
     :rtype: bool
     """
+    success = False
+
     if self.ser is not None:
       try:
         self.ser.write(data)
+        self.ser.flush()
+        success = True
       except serial.SerialException as e:
-        return False
-      return True
+        pass
+    
+    return success
 
-  def read(len):
+
+  def read(self, len):
     """
     Read data from the firmware.
     :param len: Data length.

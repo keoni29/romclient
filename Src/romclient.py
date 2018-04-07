@@ -7,7 +7,7 @@ class State():
   DUMP_END = 3
   DUMP_ABORT = 4
   DUMP_FAIL = 5
-  UNLOCK = 6
+  RESET = 6
   INIT = 7
 
 class RomClient():
@@ -44,6 +44,12 @@ class RomClient():
     self.dataValid = False
     self.state = State.INIT
     
+
+    # Set up ROM data
+    self.clearRom()
+
+  def clearRom(self):
+    self.romData = bytearray()
 
   def lock(self):
     self.parameterLock = True
@@ -105,34 +111,54 @@ class RomClient():
       self.lock()
       self.debugCount = 50
 
+      self.clearRom()
+
+      # Test: 'R' character initiates rom dump sequence
+      self.fw.write(b'R')
+
     elif self.state == State.DUMP:
-      
       if self.debugCount:
         self.debugCount -= 1
         self.debugLog(str(self.debugCount))
+
+        success,data = self.fw.read(500)
+        if not success:
+          self.state = State.DUMP_FAIL
+        elif len(data):
+          self.romData.extend(data)
+          self.debugLog('Receive' + str(len(data)) + 'bytes')
+          # try:
+          #   self.log('UTF-8: ' + data.decode('utf-8'))
+          # except:
+          #   self.log('HEX: ' + ''.join('{:02x}'.format(x, x) for x in data))
       else:
         self.state = State.DUMP_END
 
     elif self.state == State.DUMP_END:
       self.log('Done! Rom has been dumped succesfully.')
       self.dataValid = True
-      self.state = State.UNLOCK
+      self.state = State.RESET
 
     elif self.state == State.DUMP_ABORT:
       self.log('ROM dump aborted.')
-      self.state = State.UNLOCK
+      self.state = State.RESET
 
     elif self.state == State.DUMP_FAIL:
       self.log('ROM dump failed.')
-      self.state = State.UNLOCK
+      self.state = State.RESET
 
-    elif self.state == State.UNLOCK:
+    elif self.state == State.RESET:
       self.unlock()
       self.state = State.READY
 
   def saveDump(self, name):
     if not self.locked() and self.dataValid:
       self.log('Saving data')
+      with open(name, 'wb+') as f:
+        try:
+          f.write(self.romData)
+        except IOError as e:
+          print("IOError: (", e.errno, "):", e.strerror)
 
 
   def print(self, message):

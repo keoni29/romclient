@@ -28,6 +28,7 @@ def fileSave():
   if fileName:
     debugLog('Saving to file')
     debugLog(fileName)
+    rc.saveDump(fileName)
     # TODO save buffer to file
   else:
     pass
