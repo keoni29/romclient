@@ -1,0 +1,90 @@
+# -*- coding: utf-8 -*-
+
+# Form implementation generated from reading ui file 'QT5Designer_ROMClient_v04-00.ui'
+#
+# Created by: PyQt5 UI code generator 5.10.1
+#
+# WARNING! All changes made in this file will be lost!
+
+from PyQt5 import QtCore, QtGui, QtWidgets
+
+class Ui_MainWindow(object):
+    def setupUi(self, MainWindow):
+        MainWindow.setObjectName("MainWindow")
+        MainWindow.resize(490, 381)
+        self.centralwidget = QtWidgets.QWidget(MainWindow)
+        self.centralwidget.setObjectName("centralwidget")
+        self.verticalLayout = QtWidgets.QVBoxLayout(self.centralwidget)
+        self.verticalLayout.setObjectName("verticalLayout")
+        self.messageLog = QtWidgets.QTextEdit(self.centralwidget)
+        self.messageLog.setEnabled(False)
+        self.messageLog.setObjectName("messageLog")
+        self.verticalLayout.addWidget(self.messageLog)
+        self.pushButtonGo = QtWidgets.QPushButton(self.centralwidget)
+        self.pushButtonGo.setObjectName("pushButtonGo")
+        self.verticalLayout.addWidget(self.pushButtonGo)
+        MainWindow.setCentralWidget(self.centralwidget)
+        self.menubar = QtWidgets.QMenuBar(MainWindow)
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 490, 29))
+        self.menubar.setObjectName("menubar")
+        self.menuFile = QtWidgets.QMenu(self.menubar)
+        self.menuFile.setObjectName("menuFile")
+        self.menuSettings = QtWidgets.QMenu(self.menubar)
+        self.menuSettings.setObjectName("menuSettings")
+        self.menuBankswitching = QtWidgets.QMenu(self.menuSettings)
+        self.menuBankswitching.setObjectName("menuBankswitching")
+        self.menuSerial_Port = QtWidgets.QMenu(self.menuSettings)
+        self.menuSerial_Port.setObjectName("menuSerial_Port")
+        self.menuHelp = QtWidgets.QMenu(self.menubar)
+        self.menuHelp.setObjectName("menuHelp")
+        MainWindow.setMenuBar(self.menubar)
+        self.statusbar = QtWidgets.QStatusBar(MainWindow)
+        self.statusbar.setObjectName("statusbar")
+        MainWindow.setStatusBar(self.statusbar)
+        self.actionSave = QtWidgets.QAction(MainWindow)
+        self.actionSave.setObjectName("actionSave")
+        self.actionExit = QtWidgets.QAction(MainWindow)
+        self.actionExit.setObjectName("actionExit")
+        self.actionNone = QtWidgets.QAction(MainWindow)
+        self.actionNone.setObjectName("actionNone")
+        self.actionF8_8KB = QtWidgets.QAction(MainWindow)
+        self.actionF8_8KB.setObjectName("actionF8_8KB")
+        self.actionCOM1 = QtWidgets.QAction(MainWindow)
+        self.actionCOM1.setObjectName("actionCOM1")
+        self.actionCOM2 = QtWidgets.QAction(MainWindow)
+        self.actionCOM2.setObjectName("actionCOM2")
+        self.actionAbout = QtWidgets.QAction(MainWindow)
+        self.actionAbout.setObjectName("actionAbout")
+        self.menuFile.addAction(self.actionSave)
+        self.menuFile.addAction(self.actionExit)
+        self.menuBankswitching.addAction(self.actionNone)
+        self.menuBankswitching.addAction(self.actionF8_8KB)
+        self.menuSerial_Port.addAction(self.actionCOM1)
+        self.menuSerial_Port.addAction(self.actionCOM2)
+        self.menuSettings.addAction(self.menuBankswitching.menuAction())
+        self.menuSettings.addAction(self.menuSerial_Port.menuAction())
+        self.menuHelp.addAction(self.actionAbout)
+        self.menubar.addAction(self.menuFile.menuAction())
+        self.menubar.addAction(self.menuSettings.menuAction())
+        self.menubar.addAction(self.menuHelp.menuAction())
+
+        self.retranslateUi(MainWindow)
+        QtCore.QMetaObject.connectSlotsByName(MainWindow)
+
+    def retranslateUi(self, MainWindow):
+        _translate = QtCore.QCoreApplication.translate
+        MainWindow.setWindowTitle(_translate("MainWindow", "ROMClient v04-00 - VCS Game Dumping Utility"))
+        self.pushButtonGo.setText(_translate("MainWindow", "Go!"))
+        self.menuFile.setTitle(_translate("MainWindow", "Fi&le"))
+        self.menuSettings.setTitle(_translate("MainWindow", "Setti&ngs"))
+        self.menuBankswitching.setTitle(_translate("MainWindow", "Bankswitching"))
+        self.menuSerial_Port.setTitle(_translate("MainWindow", "Serial Port"))
+        self.menuHelp.setTitle(_translate("MainWindow", "Help"))
+        self.actionSave.setText(_translate("MainWindow", "Save"))
+        self.actionExit.setText(_translate("MainWindow", "Exit"))
+        self.actionNone.setText(_translate("MainWindow", "None"))
+        self.actionF8_8KB.setText(_translate("MainWindow", "F8 (8KB)"))
+        self.actionCOM1.setText(_translate("MainWindow", "COM1"))
+        self.actionCOM2.setText(_translate("MainWindow", "COM2"))
+        self.actionAbout.setText(_translate("MainWindow", "About"))
+
