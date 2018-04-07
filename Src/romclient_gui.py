@@ -64,7 +64,9 @@ def handleDebugOption():
   global debugLogEnabled
   if ui.actionDebug.isChecked():
     debugLogEnabled = True
+    debugLog('Enabled debug logs')
   else:
+    debugLog('Disabled debug logs')
     debugLogEnabled = False
 
 #//////////////////////////////////////////////////////////////////////////////
@@ -90,11 +92,18 @@ def update():
 
 def lockGui():
   debugLog('LockParameters')
+  lock(True)
 
 
 def unlockGui():
   debugLog('UnlockParameters')
+  lock(False)
 
+def lock(locked):
+  enabled = not locked
+  ui.menubar.setEnabled(enabled)
+  ui.buttonDump.setEnabled(enabled)
+  ui.groupBox.setEnabled(enabled)
 
 #//////////////////////////////////////////////////////////////////////////////
 # Main
