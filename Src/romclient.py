@@ -1,5 +1,11 @@
 """ VCS game ROM dumping utility """
 
+def log(message):
+    ui.messageLog.append(message)
+
+def startRead():
+    log('Starting ROM Dump')
+
 if __name__ == "__main__":
     import serial
     import sys
@@ -9,5 +15,6 @@ if __name__ == "__main__":
     MainWindow = QtWidgets.QMainWindow()
     ui = Ui_MainWindow()
     ui.setupUi(MainWindow)
+    ui.pushButtonGo.pressed.connect(startRead)
     MainWindow.show()
     sys.exit(app.exec_())
