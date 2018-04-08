@@ -28,6 +28,29 @@ class _State():
   INIT = 7
   DUMP_TIMEOUT = 8
 
+class BankSwitchMethod():
+  """ Bankswitching types enum
+  Special thanks to Kevin "Kevtris" Horton for these descriptions
+
+  Attributes:
+    NONE  No bankswitching.
+    F6    FF6/FF7/FF8/FF9 bankswitching
+    F8    FF8/FF9 bankswitching
+    FA    FF8/FF9/FFA bankswitching (aka CBS' RAM Plus)
+    E0    FE0-FF7 bankswitching (aka Parker Bros.)
+    E7    FE0-FE7 bankswitching found on M-Network carts
+    FE    01FE/11FE bankswitching (aka Activision Robot Tank)
+    USER  User defined bankswitching
+  """
+  NONE = 0
+  F6 = 1
+  F8 = 2
+  FA = 3
+  E0 = 4
+  E7 = 5
+  FE = 6
+  USER = 7
+
 class _Rom():
   """ Storage class with random access """
   def __init__(self):
@@ -67,7 +90,7 @@ class RomClient():
     self.setSerialReadTimeout(1)
     self.fw = Fw_Link()
     self.setSerialPort(port)
-    self.setBankSwitchMethod(None)
+    self.setBankSwitchMethod(BankSwitchMethod.NONE)
 
     # Timeout ticks
     self.setTimeoutTicks(10)
