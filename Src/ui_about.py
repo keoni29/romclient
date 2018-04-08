@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_aboutDialog(object):
     def setupUi(self, aboutDialog):
         aboutDialog.setObjectName("aboutDialog")
-        aboutDialog.resize(375, 219)
+        aboutDialog.resize(465, 257)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)

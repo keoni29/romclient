@@ -102,8 +102,16 @@
      <addaction name="actionNone"/>
      <addaction name="actionF8_8KB"/>
     </widget>
+    <widget class="QMenu" name="menuEmulator">
+     <property name="title">
+      <string>Emulator</string>
+     </property>
+     <addaction name="actionAuto_Launch"/>
+     <addaction name="actionLaunch_Now"/>
+    </widget>
     <addaction name="menuBankswitching"/>
     <addaction name="actionDebug"/>
+    <addaction name="menuEmulator"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -151,7 +159,20 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Enable Debugging</string>
+    <string>&amp;Enable Debugging</string>
+   </property>
+  </action>
+  <action name="actionAuto_Launch">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Auto Launch</string>
+   </property>
+  </action>
+  <action name="actionLaunch_Now">
+   <property name="text">
+    <string>Launch Now</string>
    </property>
   </action>
  </widget>

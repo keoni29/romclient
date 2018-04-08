@@ -4,10 +4,10 @@ class Fw_Link():
   """ Communicate with firmware through serial port """
 
   def __init__(self, port = None):
-    self.open(port)
+    self.open(port, 0)
     
 
-  def open(self, port):
+  def open(self, port, readtimeout):
     """ 
     Open a serial port for communication with the firmware.
     :param name: The name of the serial port e.g. /dev/ttyS0.
@@ -19,7 +19,11 @@ class Fw_Link():
     if port is not None:
       try:
         self.ser = serial.Serial(port)
-        self.ser.timeout = 0.1
+        self.ser.timeout = readtimeout
+        # Use common baud rate (Almost 1 MB/s)
+        # When using USB CDC (virtual COM port) any baud rate can be used.
+        # The limit is about 1 MB/s with fast firmware
+        self.ser.baudrate = 921600
         self.ser.flushInput()
         self.ser.flushOutput()
 
@@ -43,10 +47,11 @@ class Fw_Link():
     Write data to the firmware.
     :param data: Data.
     :type data: bytes 
-    :return: True if data was written
-    :rtype: bool
+    :return: success, errorstr. success is True if data was written
+    :rtype: bool, str
     """
     success = False
+    errorstr = ''
 
     if self.ser is not None:
       try:
@@ -54,9 +59,11 @@ class Fw_Link():
         self.ser.flush()
         success = True
       except serial.SerialException as e:
-        pass
+        errorstr = e.strerror
+      except serial.SerialTimeoutException as e:
+        errorstr = e.strerror
     
-    return success
+    return success, errorstr
 
 
   def read(self, len):
@@ -71,7 +78,7 @@ class Fw_Link():
 
     if self.ser is not None:
       try:
-        data = self.ser.read(500)
+        data = self.ser.read(len)
         success = True
       except serial.SerialException as e:
         pass

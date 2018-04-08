@@ -8,8 +8,19 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtCore import QTimer
 
-kUpdateTimerInterval = 100 # ms
+# Timeout time (in ms) is:
+#   kUpdateTimerInterval * kReadTimeoutTicks
+kUpdateTimerInterval = 1000 # ms
+kSerialTimeoutS = 0.1 # s
+kReadTimeoutTicks = 5
 debugLogEnabled = False
+
+#//////////////////////////////////////////////////////////////////////////////
+# Emulator
+#//////////////////////////////////////////////////////////////////////////////
+def handleAutoLaunch(checked):
+  rc.setLaunchEmulatorEnabled(checked)
+    
 
 #//////////////////////////////////////////////////////////////////////////////
 # File saving
@@ -34,7 +45,7 @@ def fileSave():
     pass
 
 #//////////////////////////////////////////////////////////////////////////////
-# Message log area
+# Log messages
 #//////////////////////////////////////////////////////////////////////////////
 def log(message):
   ui.messageLog.append(message)
@@ -42,7 +53,7 @@ def log(message):
 
 def debugLog(message):
   if debugLogEnabled:
-    log('\t\t___debug__ ' + message)
+    log('debug____ :' + message)
 
 
 def rcLog(message):
@@ -61,9 +72,9 @@ def fileExit():
   exit()
 
 
-def handleDebugOption():
+def handleDebugOption(checked):
   global debugLogEnabled
-  if ui.actionDebug.isChecked():
+  if checked:
     debugLogEnabled = True
     debugLog('Enabled debug logs')
   else:
@@ -71,7 +82,7 @@ def handleDebugOption():
     debugLogEnabled = False
 
 #//////////////////////////////////////////////////////////////////////////////
-# Serial port area
+# Serial port selection
 #//////////////////////////////////////////////////////////////////////////////
 def serialPortScan():
   ports = serial.tools.list_ports.comports()
@@ -90,11 +101,15 @@ def serialPortSelect(item):
 
 def update():
   rc.update()
+  debugLog('tick')
+
+#//////////////////////////////////////////////////////////////////////////////
+# GUI Lock
+#//////////////////////////////////////////////////////////////////////////////
 
 def lockGui():
   debugLog('LockParameters')
   lock(True)
-
 
 def unlockGui():
   debugLog('UnlockParameters')
@@ -119,12 +134,15 @@ if __name__ == "__main__":
   ui.actionExit.triggered.connect(fileExit)
   ui.buttonScan.pressed.connect(serialPortScan)
   ui.comboBoxSerial.activated.connect(serialPortSelect)
-  ui.actionDebug.changed.connect(handleDebugOption)
+  ui.actionDebug.toggled.connect(handleDebugOption)
+  ui.actionAuto_Launch.toggled.connect(handleAutoLaunch)
 
   # Set up romclient
   rc = RomClient(None, rcLog, rcDebugLog, lockGui, unlockGui)
   serialPortScan()
   serialPortSelect(0)
+  rc.setSerialReadTimeout(kSerialTimeoutS)
+  rc.setTimeoutTicks(kReadTimeoutTicks)
 
   ui.buttonDump.pressed.connect(rc.startDump)
   #TODO add stop dump button
