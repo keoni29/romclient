@@ -11,7 +11,7 @@ from PyQt5.QtCore import QTimer
 # Timeout time (in ms) is:
 #   kUpdateTimerInterval * kReadTimeoutTicks
 kUpdateTimerInterval = 1000 # ms
-kSerialTimeoutS = 0.1 # s
+kSerialTimeoutS = 3 # s
 kReadTimeoutTicks = 5
 debugLogEnabled = False
 

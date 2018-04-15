@@ -1,4 +1,5 @@
 from fwlink import *
+from fwpacket import *
 from subprocess import Popen
 
 def _print(message):
@@ -209,33 +210,23 @@ class RomClient():
       self.dataLength = 0
       self._clearRom()
 
-      # Test: 'R' character initiates rom dump sequence
-      success,errorstr = self.fw.write(b'R')
-      if not success:
-        self.debugLog('Write failed. Reason:' + errorstr)
-        self.state = _State.DUMP_FAIL
+      # Synchronize with firmware (just in case)
+      self.fw.sync()
 
     ### Dumping the ROM
-    if self.state == _State.DUMP:
+    if self.state == _State.DUMP: #TODO redo state machine preferably with bankswitching address generator support
       if self.timeoutCount:
         self.timeoutCount -= 1
-        #self.debugLog(str(self.timeoutCount))
+        length = 256#TODO avoid magic numbers
+        request = Fw_Packet(Fw_Command.READ_BLOCK, address=0x1000, length=length)
 
-        success,data = self.fw.read(self._kMaxReadSize)
-        length = len(data)
-        if not success:
-          self.state = _State.DUMP_FAIL
-        elif length:
-          self.romData.extend(data)
-          self.debugLog('Receive' + str(length) + 'bytes')
+        for i in range(0,16): #TODO avoid magic numbers
+          reply = self.fw.transceive(request)
+          self.romData.extend(reply.getData())
           self.dataLength += length
-          if self.dataLength == self._kDebugDataLength:
-            self.state = _State.DUMP_END
-
-          # try:
-          #   self.debugLog('UTF-8: ' + data.decode('utf-8'))
-          # except:
-          #   self.debugLog('HEX: ' + ''.join('{:02x}'.format(x, x) for x in data))
+          request.addressNextBlock()
+        
+        self.state = _State.DUMP_END
       else:
         self.state = _State.DUMP_TIMEOUT
 

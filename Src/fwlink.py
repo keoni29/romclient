@@ -1,5 +1,8 @@
 import serial
 
+from fwpacket import *
+
+#-------------------------------------------------------------------------------
 class Fw_Link():
   """ Communicate with firmware through serial port """
 
@@ -8,12 +11,10 @@ class Fw_Link():
     
 
   def open(self, port, readtimeout):
-    """ 
-    Open a serial port for communication with the firmware.
+    """ Open a serial port for communication with the firmware.
     :param name: The name of the serial port e.g. /dev/ttyS0.
     :return: True if port was opened
-    :rtype: bool
-    """
+    :rtype: bool """
     retv = False
 
     if port is not None:
@@ -41,15 +42,46 @@ class Fw_Link():
     if self.ser is not None:
       self.ser.close()
 
+  def transceive(self, request_packet):
+    """ Transmit request packet
+    :type firmware_command: Fw_Packet  
+    :return: Reply packet
+    :rtype: Fw_Packet """
 
-  def write(self, data):
-    """
-    Write data to the firmware.
+    encoded_request = request_packet._encode()
+    success,_ = self._write(encoded_request)
+    
+    reply = None
+    if success:
+      expectedLength = request_packet.getReplyPacketLength()
+      success,encoded_reply = self._read(expectedLength)
+      
+      if success:
+        actualLength = len(encoded_reply)
+        if actualLength == 0:
+          raise IOError('Did not receive reply packet')
+        elif actualLength < expectedLength:
+          raise IOError('Did not receive full reply packet')
+
+        reply = decodeFwPacket(encoded_reply)
+
+      return reply
+
+  def sync(self):
+    """ Synchronize communication with firmware
+    :rtype: bool """
+    SYNC = b'S' #TODO Define these in Fw_Command
+    NULL = b'\x00'
+    request = SYNC * 13 + NULL #TODO wait for acknowledgement (Also TODO firmware send ack after sync)
+    success, errorstr = self._write(request)
+    return success
+
+  def _write(self, data):
+    """ Write data to the firmware.
     :param data: Data.
     :type data: bytes 
     :return: success, errorstr. success is True if data was written
-    :rtype: bool, str
-    """
+    :rtype: bool, str """
     success = False
     errorstr = ''
 
@@ -66,13 +98,11 @@ class Fw_Link():
     return success, errorstr
 
 
-  def read(self, len):
-    """
-    Read data from the firmware.
+  def _read(self, len):
+    """ Read data from the firmware.
     :param len: Data length.
-    :return: Received data. Can be less bytes than requested if a timeout occured.
-    :rtype: bytes
-    """
+    :return: success, data Can be less bytes than requested if a timeout occured.
+    :rtype: boolean, bytes """
     data = b''
     success = False
 
