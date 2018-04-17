@@ -6,13 +6,9 @@ from gui import *
 from romclient import *
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QFileDialog
-from PyQt5.QtCore import QTimer
+# from PyQt5.QtCore import QTimer
 
-# Timeout time (in ms) is:
-#   kUpdateTimerInterval * kReadTimeoutTicks
-kUpdateTimerInterval = 1000 # ms
-kSerialTimeoutS = 0.1 # s
-kReadTimeoutTicks = 5
+kSerialTimeoutS = 3 # s
 debugLogEnabled = False
 
 #//////////////////////////////////////////////////////////////////////////////
@@ -97,7 +93,7 @@ def serialPortScan():
 
 def serialPortSelect(item):
   port = ui.comboBoxSerial.itemData(item)
-  rc.setSerialPort(port)
+  rc.setSerialPort(port, kSerialTimeoutS)
 
 def update():
   rc.update()
@@ -141,15 +137,13 @@ if __name__ == "__main__":
   rc = RomClient(None, rcLog, rcDebugLog, lockGui, unlockGui)
   serialPortScan()
   serialPortSelect(0)
-  rc.setSerialReadTimeout(kSerialTimeoutS)
-  rc.setTimeoutTicks(kReadTimeoutTicks)
 
-  ui.buttonDump.pressed.connect(rc.startDump)
+  ui.buttonDump.pressed.connect(rc.dumpRom)
   #TODO add stop dump button
 
-  updateTimer = QTimer()
-  updateTimer.timeout.connect(update)
-  updateTimer.start(kUpdateTimerInterval)
+  # updateTimer = QTimer()
+  # updateTimer.timeout.connect(update)
+  # updateTimer.start(kUpdateTimerInterval)
 
   # Start GUI application
   MainWindow.show()
