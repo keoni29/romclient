@@ -26,10 +26,11 @@ class Rom():
 
 
   def write(self, offset, data):
-    if offset > self.size:
-      raise IndexError('Offset is outside of ROM.')
-    self.data = overwrite(self.data, offset, data)
-    self.valid = False
+    if data is not None:
+      if offset > self.size:
+        raise IndexError('Offset is outside of ROM.')
+      self.data = overwrite(self.data, offset, data)
+      self.valid = False
 
 
   def setValid(self, valid):

@@ -1,7 +1,8 @@
 from fwpacket import *
 from fwlink import *
 import rom as ROM
-from emulator import *
+import argparse
+
 
 def _print(message):
     print(message)
@@ -45,13 +46,7 @@ class BankSwitchMethod():
 
 
 class RomClient():
-  """ ROM dumping utility
-  
-  Attributes:
-    _kTemporaryFilePath Path to temporary ROM dump file. After dumping a ROM this file is overwritten.
-  """
-
-  _kTemporaryFilePath = '.tmp.a26'
+  """ ROM dumping utility """
 
   def __init__(self, 
                 port = None, 
@@ -67,7 +62,6 @@ class RomClient():
 
     self.rom = ROM.Rom()
     self.fw = Fw_Link()
-    self.emu = Emulator()
 
     self.bankSwitchMethod = BankSwitchMethod.NONE
 
@@ -120,15 +114,17 @@ class RomClient():
     ### Dumped the ROM succesfully
     self.log('Done! Rom has been dumped succesfully.')
 
-    # Always make a temporary dump
-    self.saveDump(self._kTemporaryFilePath, self.rom)
 
-  def saveDump(self, name, rom):
+  def saveDump(self, name, rom = None):
     """
     Save ROM dump to a file 
     :param name: Name/path to file.
     :type name: str
     """
+
+    if rom is None:
+      rom = self.rom
+
     if rom.isValid():
       self.log('Saving ROM to file.')
       try:
@@ -139,13 +135,15 @@ class RomClient():
         self.log('Could not write to file.')
         self.debugLog('IOError: (' + e.errno + '): '  + e.strerror)
 
-      if self.autoLaunch:
-        self.emu.launch(name)
 
-  def setLaunchEmulatorEnabled(self, enabled):
-    self.autoLaunch = enabled
+  def scanSerial(self):
+    ports = self.fw.scan()
+    return ports
 
   def setSerialPort(self, port, timeout):
+    """ Set serial port.
+    :return: True when port was opened
+    :rtype: bool """
     retv = False
 
     if port:
@@ -182,7 +180,7 @@ class RomClient():
     :rtype: bytes """
     # TODO check length
 
-    request = Fw_Packet(Fw_Command.READ_BLOCK, address=address, length=length)
+    request = Fw_Packet(Fw_Command.READ_BLOCK, address = address, length = length)
     reply = self.fw.transceive(request)
     data = reply.getData()
 
@@ -191,6 +189,50 @@ class RomClient():
 
     return data
 
+
 if __name__ == '__main__':
-  # TODO implement
-  pass
+  import sys
+  from emulator import *
+
+  parser = argparse.ArgumentParser(description='VCS ROM dumping utility')
+  parser.add_argument('-o', dest = 'filename', default = '.tmp.a26')
+  parser.add_argument('-p', dest = 'port')
+  parser.add_argument('-l', dest = 'list', help = 'List available devices.')
+  parser.add_argument('-a', dest = 'autoLaunch', help = 'Launch emulator')
+  args = parser.parse_args()
+
+  rc = RomClient(None)
+  
+  # Scan and list serial ports
+  ports = rc.scanSerial()
+  if args.list:
+    print('Available serial ports:')
+    for i,port in iterate(ports):
+      print(i, ':', port.device)
+    sys.exit()
+
+  # Auto detect device
+  ready = False
+  if args.port is None:
+    for port in ports:
+      if '/dev/ttyACM' in port.device:
+        if rc.setSerialPort(port.device, 3):
+          #TODO do some kind of handshake with the device to verify its compatibility
+          ready = True
+          break
+  else:
+    if rc.setSerialPort(args.port, 3):
+      ready = True
+
+  if not ready:
+    print('Could not open device.')
+    sys.exit()
+
+  # Dump rom and save to file
+  rc.dumpRom()
+  rc.saveDump(args.filename)
+
+  # Auto launch emulator
+  if args.autoLaunch:
+    self.emu = Emulator()
+    self.emu.launch(args.filename)

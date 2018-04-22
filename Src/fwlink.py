@@ -1,4 +1,5 @@
 import serial
+import serial.tools.list_ports
 
 from fwpacket import *
 
@@ -7,8 +8,12 @@ class Fw_Link():
   """ Communicate with firmware through serial port """
 
   def __init__(self, port = None):
+    self.ser = None
     self.open(port, 0)
     
+
+  def scan(self):
+    return serial.tools.list_ports.comports()
 
   def open(self, port, readtimeout):
     """ Open a serial port for communication with the firmware.
@@ -30,7 +35,7 @@ class Fw_Link():
 
         retv = True  
       except serial.SerialException as e:
-        print("Serial error: (", e.errno, "):", e.strerror)
+        raise IOError("Serial port open error: (" + str(e.errno) + "):" + e.strerror)
 
     return retv
 
@@ -96,7 +101,6 @@ class Fw_Link():
         errorstr = e.strerror
     
     return success, errorstr
-
 
   def _read(self, len):
     """ Read data from the firmware.

@@ -1,150 +1,145 @@
 """ GUI wrapper for ROM dumping utility """
 
-import serial.tools.list_ports
 import sys
+from emulator import *
 from gui import *
 from romclient import *
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QFileDialog
-# from PyQt5.QtCore import QTimer
-
-kSerialTimeoutS = 3 # s
-debugLogEnabled = False
-
-#//////////////////////////////////////////////////////////////////////////////
-# Emulator
-#//////////////////////////////////////////////////////////////////////////////
-def handleAutoLaunch(checked):
-  rc.setLaunchEmulatorEnabled(checked)
-    
-
-#//////////////////////////////////////////////////////////////////////////////
-# File saving
-#//////////////////////////////////////////////////////////////////////////////
-def fileSaveDialog():  
-  options = QFileDialog.Options()
-  options |= QFileDialog.DontUseNativeDialog
-  fileName, _ =  QFileDialog.getSaveFileName(MainWindow, 'Save File',
-            '',
-            'ROM Images (*.a26 *.bin *.rom)')
-  return fileName
 
 
-def fileSave():
-  fileName = fileSaveDialog()
-  if fileName:
-    debugLog('Saving to file')
-    debugLog(fileName)
-    rc.saveDump(fileName)
-    # TODO save buffer to file
-  else:
-    pass
+class RomClientGui:
+  kSerialTimeoutS = 3 # seconds
 
-#//////////////////////////////////////////////////////////////////////////////
-# Log messages
-#//////////////////////////////////////////////////////////////////////////////
-def log(message):
-  ui.messageLog.append(message)
+  def __init__(self):
+      # Set up GUI
+    self.app = QtWidgets.QApplication(sys.argv)
+    self.MainWindow = QtWidgets.QMainWindow()
+    self.ui = Ui_MainWindow()
+    self.ui.setupUi(self.MainWindow)
+    self.ui.actionSave.triggered.connect(self.handleFileSave)
+    self.ui.actionExit.triggered.connect(self.handleFileExit)
+    self.ui.buttonScan.pressed.connect(self.handleSerialPortScan)
+    self.ui.comboBoxSerial.activated.connect(self.handleSerialPortSelect)
+    self.ui.actionDebug.toggled.connect(self.handleDebugOption)
+    self.ui.actionAuto_Launch.toggled.connect(self.handleAutoLaunch)
+    self.ui.actionLaunch_Now.triggered.connect(self.handleLaunchNow)
+    #self.autoLaunch = False
 
+    # Set up romclient
+    self.rc = RomClient(None, self.rcLog, self.rcDebugLog, self.lockGui, self.unlockGui)
+    self.handleSerialPortScan()
+    self.handleSerialPortSelect(0)
 
-def debugLog(message):
-  if debugLogEnabled:
-    log('debug____ :' + message)
+    self.ui.buttonDump.pressed.connect(self.handleDump)
 
-
-def rcLog(message):
-  log('romclient : ' + message)
-
-
-def rcDebugLog(message):
-  debugLog('romclient : ' + message)
+    self.handleDebugOption(False)
 
 
-def logClear():
-  ui.messageLog.setText('')
+  def start(self):
+      # Start GUI application
+    self.MainWindow.show()
+    sys.exit(self.app.exec_())
 
 
-def fileExit():
-  exit()
+  def handleDump(self):
+    self.rc.dumpRom()
+
+    if self.autoLaunch:
+      self.handleLaunchNow()
+
+  def handleAutoLaunch(self, checked):
+    self.autoLaunch = checked
 
 
-def handleDebugOption(checked):
-  global debugLogEnabled
-  if checked:
-    debugLogEnabled = True
-    debugLog('Enabled debug logs')
-  else:
-    debugLog('Disabled debug logs')
-    debugLogEnabled = False
-
-#//////////////////////////////////////////////////////////////////////////////
-# Serial port selection
-#//////////////////////////////////////////////////////////////////////////////
-def serialPortScan():
-  ports = serial.tools.list_ports.comports()
-  
-  ui.comboBoxSerial.clear()
-  if ports:
-    for port in ports:
-      ui.comboBoxSerial.addItem(port.device, port.device)
-  else:
-    ui.comboBoxSerial.addItem('None')
+  def handleLaunchNow(self):
+    tmp = '.tmp.a26'
+    self.rc.saveDump(tmp)
+    Emulator().launch(tmp)
 
 
-def serialPortSelect(item):
-  port = ui.comboBoxSerial.itemData(item)
-  rc.setSerialPort(port, kSerialTimeoutS)
+  def fileSaveDialog(self):  
+    options = QFileDialog.Options()
+    options |= QFileDialog.DontUseNativeDialog
+    fileName, _ =  QFileDialog.getSaveFileName(self.MainWindow, 'Save File',
+              '',
+              'ROM Images (*.a26 *.bin *.rom)')
+    return fileName
 
-def update():
-  rc.update()
-  debugLog('tick')
 
-#//////////////////////////////////////////////////////////////////////////////
-# GUI Lock
-#//////////////////////////////////////////////////////////////////////////////
+  def handleFileSave(self):
+    fileName = self.fileSaveDialog()
+    if fileName:
+      self.debugLog('Saving to file')
+      self.debugLog(fileName)
+      self.rc.saveDump(fileName)
+      # TODO save buffer to file
+    else:
+      pass
 
-def lockGui():
-  debugLog('LockParameters')
-  lock(True)
 
-def unlockGui():
-  debugLog('UnlockParameters')
-  lock(False)
+  def log(self, message):
+    self.ui.messageLog.append(message)
 
-def lock(locked):
-  enabled = not locked
-  ui.menubar.setEnabled(enabled)
-  ui.buttonDump.setEnabled(enabled)
-  ui.groupBox.setEnabled(enabled)
 
-#//////////////////////////////////////////////////////////////////////////////
-# Main
-#//////////////////////////////////////////////////////////////////////////////
+  def debugLog(self, message):
+    if self.debugLogEnabled:
+      self.log('debug____ :' + message)
+
+
+  def rcLog(self, message):
+    self.log('romclient : ' + message)
+
+
+  def rcDebugLog(self, message):
+    self.debugLog('romclient : ' + message)
+
+
+  def logClear(self):
+    self.ui.messageLog.setText('')
+
+
+  def handleFileExit(self):
+    exit()
+
+
+  def handleDebugOption(self, checked):
+    if checked:
+      self.debugLogEnabled = True
+    else:
+      self.debugLogEnabled = False
+
+
+  def handleSerialPortScan(self):
+    ports = self.rc.scanSerial()    
+    self.ui.comboBoxSerial.clear()
+    if ports:
+      for port in ports:
+        self.ui.comboBoxSerial.addItem(port.device, port.device)
+    else:
+      self.ui.comboBoxSerial.addItem('None')
+
+
+  def handleSerialPortSelect(self, item):
+    port = self.ui.comboBoxSerial.itemData(item)
+    self.rc.setSerialPort(port, self.kSerialTimeoutS)
+
+
+  def lockGui(self):
+    self.lock(True)
+
+
+  def unlockGui(self):
+    self.lock(False)
+
+
+  def lock(self, locked):
+    enabled = not locked
+    self.ui.menubar.setEnabled(enabled)
+    self.ui.buttonDump.setEnabled(enabled)
+    self.ui.groupBox.setEnabled(enabled)
+
+
 if __name__ == "__main__":
-  # Set up GUI
-  app = QtWidgets.QApplication(sys.argv)
-  MainWindow = QtWidgets.QMainWindow()
-  ui = Ui_MainWindow()
-  ui.setupUi(MainWindow)
-  ui.actionSave.triggered.connect(fileSave)
-  ui.actionExit.triggered.connect(fileExit)
-  ui.buttonScan.pressed.connect(serialPortScan)
-  ui.comboBoxSerial.activated.connect(serialPortSelect)
-  ui.actionDebug.toggled.connect(handleDebugOption)
-  ui.actionAuto_Launch.toggled.connect(handleAutoLaunch)
-
-  # Set up romclient
-  rc = RomClient(None, rcLog, rcDebugLog, lockGui, unlockGui)
-  serialPortScan()
-  serialPortSelect(0)
-
-  ui.buttonDump.pressed.connect(rc.dumpRom)
-  #TODO add stop dump button
-
-  # updateTimer = QTimer()
-  # updateTimer.timeout.connect(update)
-  # updateTimer.start(kUpdateTimerInterval)
-
-  # Start GUI application
-  MainWindow.show()
-  sys.exit(app.exec_())
+  app = RomClientGui()
+  app.start()
