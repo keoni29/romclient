@@ -1,6 +1,5 @@
 import serial
 import serial.tools.list_ports
-
 from fwpacket import *
 
 #-------------------------------------------------------------------------------
@@ -10,10 +9,18 @@ class Fw_Link():
   def __init__(self, port = None):
     self.ser = None
     self.open(port, 0)
-    
+  
+  # def __del__(self):
+  #   print('__debug__ destroy Fw_Link')
 
   def scan(self):
     return serial.tools.list_ports.comports()
+
+  def isOpen(self):
+    retv = False
+    if self.ser is not None:
+      retv = self.ser.is_open
+    return retv
 
   def open(self, port, readtimeout):
     """ Open a serial port for communication with the firmware.
@@ -35,7 +42,7 @@ class Fw_Link():
 
         retv = True  
       except serial.SerialException as e:
-        raise IOError("Serial port open error: (" + str(e.errno) + "):" + e.strerror)
+        raise IOError("serial port open error: (" + str(e.errno) + "):" + e.strerror)
 
     return retv
 
@@ -47,7 +54,7 @@ class Fw_Link():
     if self.ser is not None:
       self.ser.close()
 
-  def transceive(self, request_packet):
+  def _transceive(self, request_packet):
     """ Transmit request packet
     :type firmware_command: Fw_Packet  
     :return: Reply packet
@@ -118,3 +125,31 @@ class Fw_Link():
         pass
 
     return success, data
+
+  def read(self, address):
+    """ Read single byte
+    :rtype: bytes """
+    #todo check address
+    request = Fw_Packet(Fw_Command.READ_SINGLE, address=address)
+    reply = self._transceive(request)
+    data = reply.getData()
+
+    if len(data) != 1:
+      raise BaseException('Bug: asked for single byte, got ' + str(len(data)) + ' byte(s).')
+
+    return data
+
+
+  def readBlock(self, address, length):
+    """ Read block
+    :rtype: bytes """
+    # TODO check length
+
+    request = Fw_Packet(Fw_Command.READ_BLOCK, address = address, length = length)
+    reply = self._transceive(request)
+    data = reply.getData()
+
+    if len(data) != length:
+      raise BaseException('Bug: asked for ' + str(length) + ' byte(s), got ' + str(len(data)) + ' byte(s).')
+
+    return data

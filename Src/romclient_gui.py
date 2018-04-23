@@ -1,9 +1,8 @@
 """ GUI wrapper for ROM dumping utility """
-
 import sys
-from emulator import *
 from gui import *
-from romclient import *
+import romclient as rc
+import fwlink
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QFileDialog
 
@@ -12,7 +11,7 @@ class RomClientGui:
   kSerialTimeoutS = 3 # seconds
 
   def __init__(self):
-      # Set up GUI
+    # Set up GUI
     self.app = QtWidgets.QApplication(sys.argv)
     self.MainWindow = QtWidgets.QMainWindow()
     self.ui = Ui_MainWindow()
@@ -22,18 +21,18 @@ class RomClientGui:
     self.ui.buttonScan.pressed.connect(self.handleSerialPortScan)
     self.ui.comboBoxSerial.activated.connect(self.handleSerialPortSelect)
     self.ui.actionDebug.toggled.connect(self.handleDebugOption)
+    self.handleDebugOption(self.ui.actionDebug.isChecked())
     self.ui.actionAuto_Launch.toggled.connect(self.handleAutoLaunch)
     self.ui.actionLaunch_Now.triggered.connect(self.handleLaunchNow)
-    #self.autoLaunch = False
+    self.handleAutoLaunch(self.ui.actionAuto_Launch.isChecked())
+    self.ui.buttonDump.pressed.connect(self.handleDump)
 
-    # Set up romclient
-    self.rc = RomClient(None, self.rcLog, self.rcDebugLog, self.lockGui, self.unlockGui)
+    # Set up serial port
+    self.fw = fwlink.Fw_Link()
     self.handleSerialPortScan()
     self.handleSerialPortSelect(0)
 
-    self.ui.buttonDump.pressed.connect(self.handleDump)
-
-    self.handleDebugOption(False)
+    self.rom = None
 
 
   def start(self):
@@ -43,7 +42,7 @@ class RomClientGui:
 
 
   def handleDump(self):
-    self.rc.dumpRom()
+    self.rom = rc.dumpRom(self.fw)
 
     if self.autoLaunch:
       self.handleLaunchNow()
@@ -53,9 +52,12 @@ class RomClientGui:
 
 
   def handleLaunchNow(self):
-    tmp = '.tmp.a26'
-    self.rc.saveDump(tmp)
-    Emulator().launch(tmp)
+    if self.rom:
+      tmp = '.tmp.a26'
+      saved = rc.saveDump(tmp, self.rom)
+      if not saved:
+        self.log('Could not save file')
+      rc.launch(rc.kEmulatorPath, tmp)
 
 
   def fileSaveDialog(self):  
@@ -72,7 +74,9 @@ class RomClientGui:
     if fileName:
       self.debugLog('Saving to file')
       self.debugLog(fileName)
-      self.rc.saveDump(fileName)
+      saved = rc.saveDump(fileName, self.rom)
+      if not saved:
+        self.log('Could not save file')
       # TODO save buffer to file
     else:
       pass
@@ -111,7 +115,7 @@ class RomClientGui:
 
 
   def handleSerialPortScan(self):
-    ports = self.rc.scanSerial()    
+    ports = self.fw.scan()
     self.ui.comboBoxSerial.clear()
     if ports:
       for port in ports:
@@ -122,7 +126,7 @@ class RomClientGui:
 
   def handleSerialPortSelect(self, item):
     port = self.ui.comboBoxSerial.itemData(item)
-    self.rc.setSerialPort(port, self.kSerialTimeoutS)
+    self.fw.open(port, self.kSerialTimeoutS)
 
 
   def lockGui(self):

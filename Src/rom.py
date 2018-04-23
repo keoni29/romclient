@@ -33,7 +33,7 @@ class Rom():
       self.valid = False
 
 
-  def setValid(self, valid):
+  def setValid(self, valid): #TODO keep a shadow copy of a rom to check if all memory locations have been written to.
     self.valid = valid
 
 

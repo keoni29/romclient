@@ -1,15 +1,13 @@
-from fwpacket import *
-from fwlink import *
+from emulator import *
 import rom as ROM
 import argparse
+from subprocess import Popen
 
-
-def _print(message):
-    print(message)
-
+kSerialRxTimeout = 1 #s
+kEmulatorPath = 'stella'
 
 def _debugPrint(message):
-  self.print('___debug__ ' + message)
+  print('___debug__ ' + message)
 
 
 def _nop():
@@ -45,194 +43,131 @@ class BankSwitchMethod():
   USER = 7
 
 
-class RomClient():
-  """ ROM dumping utility """
+def launch(executable, args):
+  if executable and args:
+    return Popen([executable, args])
+  
 
-  def __init__(self, 
-                port = None, 
-                log = _print, 
-                debugLog = _debugPrint, 
-                lockGui = _nop, 
-                unlockGui = _nop):
-    # Register callbacks
-    self.log = log
-    self.debugLog = debugLog
-    self.unlockGui = unlockGui
-    self.lockGui = lockGui
+def dumpRom(fwlink, bankswitching = BankSwitchMethod.NONE):
+  """
+  Dump a ROM
+  :return: Dumped rom
+  :rtype: Rom
+  """
 
-    self.rom = ROM.Rom()
-    self.fw = Fw_Link()
+  rom = ROM.Rom()
+  fw = fwlink
 
-    self.bankSwitchMethod = BankSwitchMethod.NONE
+  if bankswitching == BankSwitchMethod.NONE:
+    rom.setSize(4096)
+    fw.sync()
 
-    self.autoLaunch = False
+    for i in range(0,16):
+      data = fw.readBlock(0x1000 + i * 256, 256)
+      rom.write(i * 256, data)
 
-#///////////////////////////////////////////////////////////////////////////////
-# Public Methods
-#///////////////////////////////////////////////////////////////////////////////
-  def dumpRom(self):
-    """
-    Dump a ROM
-    """
-    ### Begin a ROM dump
-    self.log('Starting ROM dump')
-    self.lockGui()
+    rom.setValid(True)
 
+  elif bankswitching == BankSwitchMethod.F8:
+    rom.setSize(8192)
+    fw.sync()
 
-    if self.bankSwitchMethod == BankSwitchMethod.NONE:
-      self.rom.setSize(4096)
-      self.sync()
+    data = fw.read(0x1FF8)
 
-      for i in range(0,16):
-        data = self.readBlock(0x1000 + i * 256, 256)
-        self.rom.write(i * 256, data)
+    for i in range(0,16):
+      data = fw.readBlock(0x1000 + i * 256, 256)
+      rom.write(i * 256, data)
 
-      self.rom.setValid(True)
+    for i in range(0,16):
+      data = fw.readBlock(0x1000 + i * 256, 256)
+      rom.write(i * 256 + 0x1000, data)
 
-    elif self.bankSwitchMethod == BankSwitchMethod.F8:
-      self.rom.setSize(8192)
-      self.sync()
+    rom.setValid(True)
 
-      data = self.read(0x1FF8)
+  return rom
 
-      for i in range(0,16):
-        data = self.readBlock(0x1000 + i * 256, 256)
-        self.rom.write(i * 256, data)
-
-      for i in range(0,16):
-        data = self.readBlock(0x1000 + i * 256, 256)
-        self.rom.write(i * 256 + 0x1000, data)
-
-      self.rom.setValid(True)
-
-
-    else:
-      self.log('Bankswitch method not implemented.')
-
-    self.unlockGui()
-
-    ### Dumped the ROM succesfully
-    self.log('Done! Rom has been dumped succesfully.')
-
-
-  def saveDump(self, name, rom = None):
-    """
-    Save ROM dump to a file 
-    :param name: Name/path to file.
-    :type name: str
-    """
-
-    if rom is None:
-      rom = self.rom
-
-    if rom.isValid():
-      self.log('Saving ROM to file.')
+def saveDump(name, rom):
+  """
+  Save ROM dump to a file 
+  :param name: Name/path to file.
+  :param rom: ROM dump to save
+  :type name: str
+  :type rom: Rom
+  """
+  success = False
+  if rom:
+    with open(name, 'wb+') as f:
       try:
-        with open(name, 'wb+') as f:
-          f.write(bytes(rom))
+        d = bytes(rom)
+        try: 
+          f.write(d)
+          success = True
+        except IOError:
+          pass
+      except BufferError:
+        pass
 
-      except IOError as e:
-        self.log('Could not write to file.')
-        self.debugLog('IOError: (' + e.errno + '): '  + e.strerror)
+  return success
 
-
-  def scanSerial(self):
-    ports = self.fw.scan()
-    return ports
-
-  def setSerialPort(self, port, timeout):
-    """ Set serial port.
-    :return: True when port was opened
-    :rtype: bool """
-    retv = False
-
-    if port:
-      if self.fw.open(port, timeout):
-        self.log('Opened serial port ' + port)
-        retv = True
-      else:
-        self.log('Could not open serial port ' + port)
-
-    return retv
-
-
-  def sync(self):
-    """ Synchronize with firmware """
-    self.fw.sync()
-
-
-  def read(self, address):
-    """ Read single byte
-    :rtype: bytes """
-    #todo check address
-    request = Fw_Packet(Fw_Command.READ_SINGLE, address=address)
-    reply = self.fw.transceive(request)
-    data = reply.getData()
-
-    if len(data) != 1:
-      raise BaseException('Bug: asked for single byte, got ' + str(len(data)) + ' byte(s).')
-
-    return data
-
-
-  def readBlock(self, address, length):
-    """ Read block
-    :rtype: bytes """
-    # TODO check length
-
-    request = Fw_Packet(Fw_Command.READ_BLOCK, address = address, length = length)
-    reply = self.fw.transceive(request)
-    data = reply.getData()
-
-    if len(data) != length:
-      raise BaseException('Bug: asked for ' + str(length) + ' byte(s), got ' + str(len(data)) + ' byte(s).')
-
-    return data
-
+def scanSerial(fwlink):
+  return fw.scan()
 
 if __name__ == '__main__':
   import sys
-  from emulator import *
+  from fwlink import *
 
   parser = argparse.ArgumentParser(description='VCS ROM dumping utility')
   parser.add_argument('-o', dest = 'filename', default = '.tmp.a26')
   parser.add_argument('-p', dest = 'port')
-  parser.add_argument('-l', dest = 'list', help = 'List available devices.')
-  parser.add_argument('-a', dest = 'autoLaunch', help = 'Launch emulator')
+  parser.add_argument('-l', dest = 'list', action = 'store_true', help = 'List available devices.')
+  parser.add_argument('-a', dest = 'autoLaunch', action = 'store_true', help = 'Launch emulator')
   args = parser.parse_args()
-
-  rc = RomClient(None)
   
   # Scan and list serial ports
-  ports = rc.scanSerial()
+  fw = Fw_Link()
+  ports = scanSerial()
   if args.list:
-    print('Available serial ports:')
-    for i,port in iterate(ports):
-      print(i, ':', port.device)
+    print('Available serial ports:\n')
+    for i,port in enumerate(ports):
+      print('*\t', port.device)
+    print('')
     sys.exit()
 
   # Auto detect device
-  ready = False
   if args.port is None:
     for port in ports:
       if '/dev/ttyACM' in port.device:
-        if rc.setSerialPort(port.device, 3):
-          #TODO do some kind of handshake with the device to verify its compatibility
-          ready = True
+        try:
+          # Attempt to open port
+          fw.open(port.device, kSerialRxTimeout) #TODO refactor
+          #TODO verify link with handshake
           break
+        except IOError as e:
+          print(e.strerror)
   else:
-    if rc.setSerialPort(args.port, 3):
-      ready = True
+    try:
+      fw.open(args.port, kSerialRxTimeout) #TODO refactor
+    except IOError as e:
+      print(e.strerror)
 
-  if not ready:
-    print('Could not open device.')
+  if not fw.isOpen():
+    print('Could not establish firmware link.')
     sys.exit()
 
   # Dump rom and save to file
-  rc.dumpRom()
-  rc.saveDump(args.filename)
+  print('Starting ROM dump')
+  rom = dumpRom(fw)
+
+  if rom.isValid():
+    print('Rom has been dumped succesfully')
+  else:
+    print('Dump failed')
+    sys.exit()
+
+  print('Saving ROM dump to file')
+  saveDump(args.filename, rom) #TODO check if file can be created before dumping
 
   # Auto launch emulator
   if args.autoLaunch:
-    self.emu = Emulator()
-    self.emu.launch(args.filename)
+    print('Launching emulator')
+    launch(kEmulatorPath, args.filename)
