@@ -1,4 +1,3 @@
-from emulator import *
 import rom as ROM
 import argparse
 from subprocess import Popen
@@ -125,7 +124,7 @@ if __name__ == '__main__':
   
   # Scan and list serial ports
   fw = Fw_Link()
-  ports = scanSerial()
+  ports = scanSerial(fw)
   if args.list:
     print('Available serial ports:\n')
     for i,port in enumerate(ports):
