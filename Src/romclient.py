@@ -1,9 +1,14 @@
+""" 
+  Romclient
+  ROM dumping utility
+  """
+
 import rom as ROM
 import argparse
 from subprocess import Popen
 
 kSerialRxTimeout = 1 #s
-kEmulatorPath = 'stella'
+kEmulatorPath = 'stella' # TODO make argparse argument
 
 def _debugPrint(message):
   print('___debug__ ' + message)
@@ -14,42 +19,27 @@ def _nop():
   pass
 
 
-#///////////////////////////////////////////////////////////////////////////////
-# Classes
-#///////////////////////////////////////////////////////////////////////////////
-
-class BankSwitchMethod():
-  """ Bankswitching types enum
-  Special thanks to Kevin "Kevtris" Horton for these descriptions
-
-  Attributes:
-    NONE  No bankswitching.
-    F6    FF6/FF7/FF8/FF9 bankswitching
-    F8    FF8/FF9 bankswitching
-    FA    FF8/FF9/FFA bankswitching (aka CBS' RAM Plus)
-    E0    FE0-FF7 bankswitching (aka Parker Bros.)
-    E7    FE0-FE7 bankswitching found on M-Network carts
-    FE    01FE/11FE bankswitching (aka Activision Robot Tank)
-    USER  User defined bankswitching
-  """
-  NONE = 0
-  F6 = 1
-  F8 = 2
-  FA = 3
-  E0 = 4
-  E7 = 5
-  FE = 6
-  USER = 7
-
-
 def launch(executable, args):
   if executable and args:
     return Popen([executable, args])
   
 
-def dumpRom(fwlink, bankswitching = BankSwitchMethod.NONE):
+def dumpRom(fwlink, bankswitching = 'none'):
   """
   Dump a ROM
+
+  === Bankswitching types ===
+  Special thanks to Kevin "Kevtris" Horton for these descriptions
+
+  :param bankswitching: Bankswitching schemes include:
+                      'none' No bankswitching.
+        not implemented 'f6' FF6/FF7/FF8/FF9 bankswitching
+                        'f8' FF8/FF9 bankswitching
+        not implemented 'fa' FF8/FF9/FFA bankswitching (aka CBS' RAM Plus)
+        not implemented 'e0' FE0-FF7 bankswitching (aka Parker Bros.)
+        not implemented 'e7' FE0-FE7 bankswitching found on M-Network carts
+        not implemented 'fe' 01FE/11FE bankswitching (aka Activision Robot Tank)
+  :type bankswitching: str
   :return: Dumped rom
   :rtype: Rom
   """
@@ -57,7 +47,9 @@ def dumpRom(fwlink, bankswitching = BankSwitchMethod.NONE):
   rom = ROM.Rom()
   fw = fwlink
 
-  if bankswitching == BankSwitchMethod.NONE:
+  # TODO create some kind of configuration file for defining bankswitching schemes
+
+  if bankswitching == 'none':
     rom.setSize(4096)
     fw.sync()
 
@@ -67,21 +59,36 @@ def dumpRom(fwlink, bankswitching = BankSwitchMethod.NONE):
 
     rom.setValid(True)
 
-  elif bankswitching == BankSwitchMethod.F8:
+  elif bankswitching == 'f8':
     rom.setSize(8192)
     fw.sync()
 
-    data = fw.read(0x1FF8)
+    # Switch to bank0 by reading from hotspot 1FF8
+    fw.read(0x1FF8)
 
+    # Read bank
     for i in range(0,16):
       data = fw.readBlock(0x1000 + i * 256, 256)
-      rom.write(i * 256, data)
+      rom.write(i * 256, data)    
+
+    # Switch to bank1 by reading from hotspot 1FF9
+    data = fw.read(0x1FF9)
 
     for i in range(0,16):
       data = fw.readBlock(0x1000 + i * 256, 256)
       rom.write(i * 256 + 0x1000, data)
 
+    # Read some data near the hotspots
+    fw.read(0x1FF8)
+    rom.write(0x0FF8, fw.read(0x1FF8))
+    rom.write(0x0FFA, fw.readBlock(0x1FFA, 6))
+    fw.read(0x1FF9)
+    rom.write(0x1FF9, fw.read(0x1FF9))
+    rom.write(0x1FFA, fw.readBlock(0x1FFA, 6))
+
     rom.setValid(True)
+  else:
+      raise ValueError("Unsupported bankswitching method " + bankswitching)
 
   return rom
 
@@ -120,6 +127,8 @@ if __name__ == '__main__':
   parser.add_argument('-p', dest = 'port')
   parser.add_argument('-l', dest = 'list', action = 'store_true', help = 'List available devices.')
   parser.add_argument('-a', dest = 'autoLaunch', action = 'store_true', help = 'Launch emulator')
+  parser.add_argument('-b', dest = 'switchMethod', help = 'Bankswitching method', choices=['none', 'f6', 'f8', 'fa', 'e0', 'e7', 'fe'], default='none')
+
   args = parser.parse_args()
   
   # Scan and list serial ports
@@ -150,12 +159,12 @@ if __name__ == '__main__':
       print(e.strerror)
 
   if not fw.isOpen():
-    print('Could not establish firmware link.')
+    print('Could not connect to device.')
     sys.exit()
 
   # Dump rom and save to file
   print('Starting ROM dump')
-  rom = dumpRom(fw)
+  rom = dumpRom(fw, args.switchMethod)
 
   if rom.isValid():
     print('Rom has been dumped succesfully')

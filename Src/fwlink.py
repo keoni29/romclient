@@ -4,23 +4,23 @@ from fwpacket import *
 
 #-------------------------------------------------------------------------------
 class Fw_Link():
-  """ Communicate with firmware through serial port """
+  """ Communicate with device firmware through serial port """
 
   def __init__(self, port = None):
     self.ser = None
     self.open(port, 0)
   
-  # def __del__(self):
-  #   print('__debug__ destroy Fw_Link')
 
   def scan(self):
     return serial.tools.list_ports.comports()
+
 
   def isOpen(self):
     retv = False
     if self.ser is not None:
       retv = self.ser.is_open
     return retv
+
 
   def open(self, port, readtimeout):
     """ Open a serial port for communication with the firmware.
@@ -33,13 +33,13 @@ class Fw_Link():
       try:
         self.ser = serial.Serial(port)
         self.ser.timeout = readtimeout
-        # Use common baud rate (Almost 1 MB/s)
         # When using USB CDC (virtual COM port) any baud rate can be used.
         # The limit is about 1 MB/s with fast firmware
         self.ser.baudrate = 921600
         self.ser.flushInput()
         self.ser.flushOutput()
 
+        print("Using device on port", port)
         retv = True  
       except serial.SerialException as e:
         raise IOError("serial port open error: (" + str(e.errno) + "):" + e.strerror)
@@ -53,6 +53,7 @@ class Fw_Link():
     """
     if self.ser is not None:
       self.ser.close()
+
 
   def _transceive(self, request_packet):
     """ Transmit request packet
@@ -79,14 +80,17 @@ class Fw_Link():
 
       return reply
 
+
   def sync(self):
     """ Synchronize communication with firmware
+    :return: True on succesful sync
     :rtype: bool """
-    SYNC = b'S' #TODO Define these in Fw_Command
-    NULL = b'\x00'
-    request = SYNC * 13 + NULL #TODO wait for acknowledgement (Also TODO firmware send ack after sync)
+
+    #TODO wait for acknowledgement (Also TODO firmware send ack after sync)
+    request = bytes([Fw_Command.SYNC]) * 13 + b'\x00'
     success, errorstr = self._write(request)
     return success
+
 
   def _write(self, data):
     """ Write data to the firmware.
@@ -109,6 +113,7 @@ class Fw_Link():
     
     return success, errorstr
 
+
   def _read(self, len):
     """ Read data from the firmware.
     :param len: Data length.
@@ -125,6 +130,7 @@ class Fw_Link():
         pass
 
     return success, data
+
 
   def read(self, address):
     """ Read single byte

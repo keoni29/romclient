@@ -132,10 +132,14 @@ class Fw_Packet:
 
 
 def decodeFwPacket(encoded_packet):
-    """ Create packet from encoded data """
+    """ Decode a packet
+    :param encoded_packet: bytes
+    :type encoded_packet: bytes
+    :return: The decoded packet
+    :rtype: Fw_Packet """
 
     if len(encoded_packet) < Fw_Packet._HEADER_LENGTH:
-      return None #TODO length exception?
+      raise BaseException("Incomplete package")
 
     # TODO clean up code and make more readable
     fmt = '<B B H H H H'
@@ -156,7 +160,7 @@ def decodeFwPacket(encoded_packet):
     checksum = packet[5]
 
     if verifyChecksum != checksum:
-      return None #TODO checksum exception?
+      raise BaseException("Checksum mismatch")
 
     p = Fw_Packet(\
       cmd = cmd, status = status, requestLength = requestLength, \
