@@ -7,7 +7,7 @@ import rom as ROM
 import argparse
 from subprocess import Popen
 
-kSerialRxTimeout = 1 #s
+kSerialRxTimeout = 2 # unit: s
 kEmulatorPath = 'stella' # TODO make argparse argument
 
 def _debugPrint(message):
@@ -51,7 +51,7 @@ def dumpRom(fwlink, bankswitching = 'none'):
 
   if bankswitching == 'none':
     rom.setSize(4096)
-    fw.sync()
+    #fw.sync()
 
     for i in range(0,16):
       data = fw.readBlock(0x1000 + i * 256, 256)
@@ -61,7 +61,7 @@ def dumpRom(fwlink, bankswitching = 'none'):
 
   elif bankswitching == 'f8':
     rom.setSize(8192)
-    fw.sync()
+    #fw.sync()
 
     # Switch to bank0 by reading from hotspot 1FF8
     fw.read(0x1FF8)
