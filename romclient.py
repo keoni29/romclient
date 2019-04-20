@@ -3,7 +3,7 @@
   ROM dumping utility
   """
 
-import rom as ROM
+import vcsromclient.rom as ROM
 import argparse
 from subprocess import Popen
 
@@ -115,12 +115,12 @@ def saveDump(name, rom):
 
   return success
 
-def scanSerial(fwlink):
+def scanSerial(fw):
   return fw.scan()
 
-if __name__ == '__main__':
+def main():
   import sys
-  from fwlink import *
+  import vcsromclient
 
   parser = argparse.ArgumentParser(description='VCS ROM dumping utility')
   parser.add_argument('-o', dest = 'filename', default = '.tmp.a26')
@@ -132,7 +132,7 @@ if __name__ == '__main__':
   args = parser.parse_args()
   
   # Scan and list serial ports
-  fw = Fw_Link()
+  fw = vcsromclient.Fw_Link()
   ports = scanSerial(fw)
   if args.list:
     print('Available serial ports:\n')
@@ -179,3 +179,6 @@ if __name__ == '__main__':
   if args.autoLaunch:
     print('Launching emulator')
     launch(kEmulatorPath, args.filename)
+
+if __name__ == '__main__':
+  main()

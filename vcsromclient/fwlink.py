@@ -1,6 +1,6 @@
 import serial
 import serial.tools.list_ports
-from fwpacket import *
+from .fwpacket import *
 
 #-------------------------------------------------------------------------------
 class Fw_Link():
