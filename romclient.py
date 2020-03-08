@@ -7,8 +7,13 @@ import vcsromclient.rom as ROM
 import argparse
 from subprocess import Popen
 
+COLOR_RED = '\u001b[31m'
+COLOR_RESET = '\u001b[0m'
+
 kSerialRxTimeout = 2 # unit: s
-kEmulatorPath = 'stella' # TODO make argparse argument
+
+def error(str):
+  return COLOR_RED + str + COLOR_RESET
 
 def _debugPrint(message):
   print('___debug__ ' + message)
@@ -128,6 +133,8 @@ def main():
   parser.add_argument('-l', dest = 'list', action = 'store_true', help = 'List available devices.')
   parser.add_argument('-a', dest = 'autoLaunch', action = 'store_true', help = 'Launch emulator')
   parser.add_argument('-b', dest = 'switchMethod', help = 'Bankswitching method', choices=['none', 'f6', 'f8', 'fa', 'e0', 'e7', 'fe'], default='none')
+  parser.add_argument('-c', dest = 'selfcheck', action = 'store_true', help = 'Quick self check by reading the cartridge twice and comparing the results.')
+  parser.add_argument('--emulator', help="Emulator executable location", default='stella')
 
   args = parser.parse_args()
   
@@ -159,17 +166,28 @@ def main():
       print(e.strerror)
 
   if not fw.isOpen():
-    print('Could not connect to device.')
+    print(error('Could not connect to device.'))
     sys.exit()
+
 
   # Dump rom and save to file
   print('Starting ROM dump')
   rom = dumpRom(fw, args.switchMethod)
+  
+  # For self check dump the rom a second time and compare the data
+  # if the data is not the same there is most likely a loose connection.
+  if args.selfcheck:
+    rom2 = dumpRom(fw, args.switchMethod)
+    if rom == rom2:
+      print('Self check passed')
+    else:
+      print(error('Self check failed. Please check connections.'))
+      sys.exit()
 
   if rom.isValid():
     print('Rom has been dumped succesfully')
   else:
-    print('Dump failed')
+    print(error('Dump failed'))
     sys.exit()
 
   print('Saving ROM dump to file')
@@ -178,7 +196,7 @@ def main():
   # Auto launch emulator
   if args.autoLaunch:
     print('Launching emulator')
-    launch(kEmulatorPath, args.filename)
+    launch(args.emulator, args.filename)
 
 if __name__ == '__main__':
   main()

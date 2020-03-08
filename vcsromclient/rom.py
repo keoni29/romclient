@@ -66,3 +66,7 @@ class Rom():
     if not self.valid:
       raise BufferError('Trying to access invalid ROM')
     return self.data
+
+  def __eq__(self, other):
+    return self.data == other.data and self.valid and other.valid and self.size == other.size
+      
